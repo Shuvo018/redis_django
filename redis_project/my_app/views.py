@@ -2,9 +2,10 @@ from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from django.core.cache import cache
 from .models import Student
-
+from .rate_limit import rate_limit
 # caching
 @api_view(['GET'])
+@rate_limit(max_request=5, time_window=60)
 def list_view(request):
     cache_key = 'students-data'
 
