@@ -4,8 +4,26 @@ from django.core.cache import cache
 from .models import Student
 from .rate_limit import rate_limit
 import redis
+import json
 
-r = redis.Redis()
+r = redis.StrictRedis(host='localhost', port=6379, db=0, decode_responses=True)
+
+@api_view(['POST'])
+def register_student(request):
+    stu_id = request.data.get('stu_id')
+    stu_name = request.data.get('stu_name')
+    
+    if not stu_id or not stu_name:
+        return Response({'error': 'Missing data'}, status=400)
+    
+    
+    student_payload = json.dumps({'stu_id': stu_id, 'stu_name': stu_name})
+
+    # 2. Push it instantly to the Redis queue
+    r.lpush('student_registration_queue', student_payload)
+    
+    # 3. Return an immediate response to the client
+    return Response({'message': 'Registration queued successfully!'}, status=202)
 
 # caching
 @api_view(['GET'])
@@ -23,6 +41,7 @@ def list_view(request):
     cache.set(cache_key, data, 60 * 5)
     return Response({"message": data})
 
+r = redis.Redis()
 @api_view(['POST'])
 def leaderBoard_add(request):
     user = request.data.get('user')
